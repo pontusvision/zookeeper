@@ -57,11 +57,49 @@ export ZOOCFGDIR=${ZOOCFGDIR:-$ZOOKEEPER_CONF}
 export CLASSPATH=$CLASSPATH:$ZOOKEEPER_CONF:$ZOOKEEPER_HOME/*:$ZOOKEEPER_HOME/lib/*
 export ZOO_LOG_DIR=${ZOO_LOG_DIR:-/var/log/zookeeper}
 export ZOO_LOG4J_PROP=${ZOO_LOG4J_PROP:-INFO,ROLLINGFILE}
-export JVMFLAGS=${JVMFLAGS:--Dzookeeper.log.threshold=INFO}
+export JVMFLAGS=${JVMFLAGS:--Dzookeeper.log.threshold=INFO -Djava.security.auth.login.config=$ZOOKEEPER_CONF/zookeeper_jaas.conf}
 export ZOO_DATADIR_AUTOCREATE_DISABLE=${ZOO_DATADIR_AUTOCREATE_DISABLE:-true}
 env CLASSPATH=$CLASSPATH ${ZOOKEEPER_HOME}/bin/zkServer.sh "$@"
 EOF
 
 chmod 755 zookeeper.service zookeeper-server
+
+cd ../conf
+
+cat << 'EOF' >> zookeeper_jaas.conf
+Server {
+com.sun.security.auth.module.Krb5LoginModule required
+useKeyTab=true
+storeKey=true
+useTicketCache=false
+keyTab="/etc/security/keytabs/hbase.service.keytab"
+principal="hbase/pontus-sandbox.pontusvision.com@PONTUSVISION.COM";
+};
+
+
+
+
+EOF
+
+
+cat << 'EOF' > zoo.cfg
+clientPort=2181
+initLimit=10
+autopurge.purgeInterval=1
+syncLimit=5
+tickTime=3000
+dataDir=/tmp/zookeeper
+autopurge.snapRetainCount=3
+#server.1=ip-10-230-56-161.eu-west-2.compute.internal:2888:3888
+#server.2=ip-10-230-56-186.eu-west-2.compute.internal:2888:3888
+#server.3=ip-10-230-56-7.eu-west-2.compute.internal:2888:3888
+
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+jaasLoginRenew=3600000
+kerberos.removeHostFromPrincipal=true
+kerberos.removeRealmFromPrincipal=true
+
+
+EOF
 
 cd $CURDIR
